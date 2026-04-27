@@ -1,0 +1,24 @@
+project:
+  name: "TLC Network Anomaly Detection"
+  version: "1.0.0"
+
+data:
+  raw_path: "data/raw/network_traffic.csv"
+  processed_path: "data/processed/features.csv"
+  samples: 10000
+  seed: 42
+
+features:
+  rolling_windows: [5, 15, 60]
+  lags: [1, 5]
+
+models:
+  random_forest:
+    n_estimators: 100
+    random_state: 42
+  isolation_forest:
+    random_state: 42
+
+reports:
+  figures_dir: "reports/figures"
+  metrics_file: "reports/model_comparison.csv"
