@@ -2,6 +2,7 @@
 
 A production-grade machine learning pipeline designed to detect anomalies in Telecommunications (TLC) network traffic, specifically optimized for Microwave Radio backhaul technology.
 
+
 ## 📡 Project Overview
 
 This project implements a robust, automated pipeline for identifying network irregularities such as **Rain Fade**, **Interference**, and **Equipment Failures**. It was developed as a technical demonstration for a Master's Thesis application at Nokia, focusing on methodological rigor, domain-specific feature engineering, and software engineering best practices.
