@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, precision_recall_fscore_support
 import matplotlib.pyplot as plt
@@ -17,67 +17,76 @@ def train_and_evaluate(input_path='data/processed/features.csv'):
     X = df.drop(columns=exclude)
     y = df['is_anomaly']
     
-    # Split data (Time-series aware split would be better, but for this demo random is okay)
-    # Using 80/20 split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    # Advanced Validation: TimeSeriesSplit
+    # This prevents "looking into the future" during training.
+    tscv = TimeSeriesSplit(n_splits=5)
     
-    print(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples.")
-    print(f"Anomalies in test set: {sum(y_test)}")
+    print(f"Starting TimeSeries Cross-Validation (5 folds)...")
     
-    # 1. Isolation Forest (Unsupervised)
-    # Note: IF predicts -1 for anomalies and 1 for normal.
-    print("\nTraining Isolation Forest...")
-    # Contamination based on training set ratio
-    contamination = sum(y_train) / len(y_train)
-    iso_forest = IsolationForest(contamination=contamination, random_state=42)
-    iso_forest.fit(X_train)
+    fold_metrics = []
     
-    # Predict
-    if_preds_raw = iso_forest.predict(X_test)
-    if_preds = np.where(if_preds_raw == -1, 1, 0)
-    
-    # 2. Random Forest (Supervised)
-    print("Training Random Forest...")
-    rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-    rf_clf.fit(X_train, y_train)
-    
-    # Predict
-    rf_preds = rf_clf.predict(X_test)
-    rf_probs = rf_clf.predict_proba(X_test)[:, 1]
-    
-    # Evaluation
-    print("\n--- Isolation Forest Performance ---")
-    print(classification_report(y_test, if_preds))
-    
-    print("\n--- Random Forest Performance ---")
-    print(classification_report(y_test, rf_preds))
-    
-    # Metrics Comparison
-    metrics = {}
-    for name, preds in zip(['Isolation Forest', 'Random Forest'], [if_preds, rf_preds]):
-        p, r, f, _ = precision_recall_fscore_support(y_test, preds, average='binary')
-        metrics[name] = {'Precision': p, 'Recall': r, 'F1-Score': f}
-        if name == 'Random Forest':
-            metrics[name]['ROC-AUC'] = roc_auc_score(y_test, rf_probs)
-        else:
-            # For IF, use decision function for AUC
-            if_scores = -iso_forest.decision_function(X_test)
-            metrics[name]['ROC-AUC'] = roc_auc_score(y_test, if_scores)
+    for fold, (train_index, test_index) in enumerate(tscv.split(X)):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        
+        # Skip folds where training or testing set has only one class
+        if len(np.unique(y_train)) < 2 or len(np.unique(y_test)) < 2:
+            print(f"Skipping Fold {fold+1}: Insufficient class diversity (Train labels: {np.unique(y_train)}, Test labels: {np.unique(y_test)})")
+            continue
+            
+        # Random Forest (Supervised)
+        rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+        rf_clf.fit(X_train, y_train)
+        
+        # Predict
+        rf_preds = rf_clf.predict(X_test)
+        rf_probs = rf_clf.predict_proba(X_test)[:, 1]
+        
+        # Calculate fold metrics
+        p, r, f, _ = precision_recall_fscore_support(y_test, rf_preds, average='binary', zero_division=0)
+        auc = roc_auc_score(y_test, rf_probs)
+        
+        fold_metrics.append({
+            'Fold': fold + 1,
+            'Precision': p,
+            'Recall': r,
+            'F1-Score': f,
+            'ROC-AUC': auc
+        })
+        print(f"Fold {fold+1} complete. F1-Score: {f:.4f}")
 
-    metrics_df = pd.DataFrame(metrics).T
-    print("\nModel Comparison Table:")
+    metrics_df = pd.DataFrame(fold_metrics)
+    print("\nTimeSeries Cross-Validation Results:")
     print(metrics_df)
+    
+    # Average metrics (excluding cases where sum(y_test)==0 if any)
+    if not metrics_df.empty:
+        print(f"\nAverage F1-Score: {metrics_df['F1-Score'].mean():.4f}")
+
+    # Final Model Training (using all available data for production)
+    print("\nTraining final production models on full dataset...")
+    
+    # Isolation Forest (Unsupervised)
+    contamination = sum(y) / len(y)
+    iso_forest = IsolationForest(contamination=contamination, random_state=42)
+    iso_forest.fit(X)
+    
+    # Random Forest (Supervised)
+    rf_final = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    rf_final.fit(X, y)
     
     # Save Models
     os.makedirs('models', exist_ok=True)
     joblib.dump(iso_forest, 'models/iso_forest.joblib')
-    joblib.dump(rf_clf, 'models/random_forest.joblib')
+    joblib.dump(rf_final, 'models/random_forest.joblib')
+    # Save the feature list for the API to ensure input consistency
+    joblib.dump(X.columns.tolist(), 'models/feature_names.joblib')
     
-    # Plot Feature Importance (Random Forest)
+    # Plot Feature Importance (Final Model)
     plt.figure(figsize=(10, 12))
-    importances = pd.Series(rf_clf.feature_importances_, index=X.columns).sort_values(ascending=True)
+    importances = pd.Series(rf_final.feature_importances_, index=X.columns).sort_values(ascending=True)
     importances.tail(20).plot(kind='barh')
-    plt.title('Top 20 Feature Importances (Random Forest)')
+    plt.title('Top 20 Feature Importance (Production Model)')
     plt.tight_layout()
     os.makedirs('reports/figures', exist_ok=True)
     plt.savefig('reports/figures/feature_importance.png')
@@ -85,7 +94,7 @@ def train_and_evaluate(input_path='data/processed/features.csv'):
     
     # Save Metrics
     os.makedirs('reports', exist_ok=True)
-    metrics_df.to_csv('reports/model_comparison.csv')
+    metrics_df.to_csv('reports/cross_validation_metrics.csv', index=False)
     
     return metrics_df
 

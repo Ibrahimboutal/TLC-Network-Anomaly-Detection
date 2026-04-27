@@ -40,6 +40,20 @@ You can run the entire end-to-end pipeline (Data Generation -> EDA -> Training -
 python main.py
 ```
 
+### Serving the API
+To start the real-time anomaly detection microservice:
+```bash
+uvicorn src.api.app:app --reload
+```
+Once running, visit `http://localhost:8000/docs` for the interactive Swagger documentation.
+
+### Containerization (Docker)
+To build and run the system as a container:
+```bash
+docker build -t tlc-anomaly-detector .
+docker run -p 8000:8000 tlc-anomaly-detector
+```
+
 ---
 
 ## 📂 Project Structure

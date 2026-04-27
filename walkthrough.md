@@ -42,16 +42,29 @@ The Random Forest model highlighted that **Rolling Mean RSL** and **Throughput D
 ![Feature Importance](file:///C:/Users/Ibrah/.gemini/antigravity/brain/7ea8a84f-4316-4075-8726-0a97f7d967bf/feature_importance.png)
 *Figure 3: Top features contributing to anomaly detection.*
 
-## 4. Automation & Scalability
+## 4. Methodological Rigor: TimeSeriesSplit
 
-The project is structured as a modular Python package with:
-- `main.py`: Single entry point for the entire pipeline.
-- `config.yaml`: Centralized configuration for hyperparameters and paths.
-- `pipeline.log`: Comprehensive execution logs for debugging and auditing.
+To prevent "data leakage" (predicting the past using future data), we implemented `TimeSeriesSplit` for validation. This approach mimics real-world temporal evaluation, ensuring the model's reliability in dynamic TLC environments.
 
-```bash
-# To run the entire pipeline:
-python main.py
-```
+## 5. Deployment: FastAPI & Docker
 
-This architecture ensures that the solution is reproducible and ready for integration into larger ecosystems like Nokia's AI-based network analysis platform.
+The model is now served as a **FastAPI microservice**, ready for integration into the "Nokia AI-based network analysis platform."
+
+### API Endpoints
+- `POST /predict`: Accepts a window of raw KPIs and returns an anomaly prediction with probability.
+- `GET /health`: Monitors service and model status.
+
+### Containerization
+A `Dockerfile` ensures the entire pipeline and API are portable and scalable, matching Nokia's "effective deployment" requirements.
+
+## 6. Software Excellence: CI/CD & Testing
+
+- **Unit Testing**: Automated tests in `tests/` verify feature engineering and data integrity.
+- **GitHub Actions**: A CI/CD workflow (`.github/workflows/main.yml`) automatically lints code and runs tests on every push.
+- **Dependency Locking**: A `requirements.lock` file ensures perfect reproducibility across different environments.
+
+## 7. Industrial Context
+
+We added a [deployment_plan.md](file:///c:/Users/Ibrah/Network-Anomaly-Detection/deployment_plan.md) that discusses:
+- Operational handling of **Rain Fade** vs. **Equipment Failure**.
+- Strategies for managing **Model Drift** and minimizing **False Positives**.
