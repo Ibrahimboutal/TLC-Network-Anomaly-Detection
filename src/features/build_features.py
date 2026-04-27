@@ -3,9 +3,18 @@ import numpy as np
 import os
 from sklearn.preprocessing import StandardScaler
 
-def build_features(input_path='data/raw/network_traffic.csv', output_path='data/processed/features.csv'):
+def build_features(df=None, input_path=None, output_path=None, scaler=None):
+    """
+    Builds features from raw network traffic data.
+    Can accept a DataFrame or a file path.
+    If scaler is provided, uses it to transform. Otherwise fits a new one.
+    """
     # Load data
-    df = pd.read_csv(input_path)
+    if df is None:
+        if input_path is None:
+             input_path = 'data/raw/network_traffic.csv'
+        df = pd.read_csv(input_path)
+    
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df.sort_values('timestamp')
     
@@ -15,22 +24,25 @@ def build_features(input_path='data/raw/network_traffic.csv', output_path='data/
     
     for window in windows:
         for col in features_to_roll:
-            # Rolling Mean
-            df[f'{col}_mean_{window}m'] = df[col].rolling(window=window).mean()
-            # Rolling Std (Volatility)
-            df[f'{col}_std_{window}m'] = df[col].rolling(window=window).std()
-            # Deviation from mean (Z-score like)
-            df[f'{col}_dev_{window}m'] = df[col] - df[f'{col}_mean_{window}m']
+            if col in df.columns:
+                # Rolling Mean
+                df[f'{col}_mean_{window}m'] = df[col].rolling(window=window).mean()
+                # Rolling Std (Volatility)
+                df[f'{col}_std_{window}m'] = df[col].rolling(window=window).std()
+                # Deviation from mean (Z-score like)
+                df[f'{col}_dev_{window}m'] = df[col] - df[f'{col}_mean_{window}m']
             
     # 2. Lagged Features (Capture sudden changes)
     lags = [1, 5]
     for lag in lags:
         for col in features_to_roll:
-            df[f'{col}_lag_{lag}'] = df[col].shift(lag)
-            df[f'{col}_diff_{lag}'] = df[col] - df[f'{col}_lag_{lag}']
+            if col in df.columns:
+                df[f'{col}_lag_{lag}'] = df[col].shift(lag)
+                df[f'{col}_diff_{lag}'] = df[col] - df[f'{col}_lag_{lag}']
             
     # 3. Log transform BER (since it spans multiple orders of magnitude)
-    df['ber_log'] = np.log10(df['ber'] + 1e-12)
+    if 'ber' in df.columns:
+        df['ber_log'] = np.log10(df['ber'] + 1e-12)
     
     # Drop rows with NaNs from rolling/lagging
     df = df.dropna()
@@ -41,17 +53,30 @@ def build_features(input_path='data/raw/network_traffic.csv', output_path='data/
     feature_cols = [c for c in df.columns if c not in exclude]
     
     # 4. Scaling
-    scaler = StandardScaler()
-    df_scaled = df.copy()
-    df_scaled[feature_cols] = scaler.fit_transform(df[feature_cols])
+    if scaler is None:
+        scaler = StandardScaler()
+        df[feature_cols] = scaler.fit_transform(df[feature_cols])
+    else:
+        # Align columns with scaler's expected feature names
+        if hasattr(scaler, "feature_names_in_"):
+            expected_features = scaler.feature_names_in_
+            # Check for missing features and fill with 0
+            for col in expected_features:
+                if col not in df.columns:
+                    df[col] = 0.0
+            # Transform only the expected features in the correct order
+            df[expected_features] = scaler.transform(df[expected_features])
+        else:
+            # Fallback if no feature names (shouldn't happen with DataFrames)
+            df[feature_cols] = scaler.transform(df[feature_cols])
     
-    # Save processed data
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_scaled.to_csv(output_path, index=False)
+    # Save processed data if path provided
+    if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        df.to_csv(output_path, index=False)
+        print(f"Processed data saved to {output_path}")
     
-    print(f"Feature engineering complete. Shape: {df_scaled.shape}")
-    print(f"Total features: {len(feature_cols)}")
-    return df_scaled
+    return df, scaler
 
 if __name__ == "__main__":
-    build_features()
+    build_features(output_path='data/processed/features.csv')

@@ -39,17 +39,29 @@ def main():
     
     # 3. Feature Engineering
     logger.info("Step 3: Building features...")
-    build_features(
+    import joblib
+    _, scaler = build_features(
         input_path=config['data']['raw_path'], 
         output_path=config['data']['processed_path']
     )
+    os.makedirs('models', exist_ok=True)
+    joblib.dump(scaler, 'models/scaler.joblib')
     
     # 4. Model Training & Evaluation
     logger.info("Step 4: Training and evaluating models...")
     metrics = train_and_evaluate(config['data']['processed_path'])
     
+    # 5. Real Data Integration
+    logger.info("Step 5: Integrating and benchmarking real-world data...")
+    from src.data.ingest_real_data import process_and_save_real_data
+    from src.models.benchmark_real_data import benchmark_real_data
+    
+    process_and_save_real_data()
+    real_metrics = benchmark_real_data()
+    
     logger.info("Pipeline completed successfully!")
-    logger.info(f"Model Results:\n{metrics}")
+    logger.info(f"Synthetic Model Results:\n{metrics}")
+    logger.info(f"Real Data Results:\n{real_metrics}")
 
 if __name__ == "__main__":
     main()

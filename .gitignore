@@ -164,3 +164,7 @@ data/processed/
 models/*.joblib
 reports/figures/
 pipeline.log
+
+
+# All csv files
+*.csv  
