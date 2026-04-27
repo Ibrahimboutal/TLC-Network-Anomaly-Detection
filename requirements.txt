@@ -11,3 +11,5 @@ uvicorn
 pydantic
 pytest
 flake8
+shap
+prometheus-fastapi-instrumentator

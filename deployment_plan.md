@@ -35,8 +35,12 @@ In a TLC network, a **False Positive** (detecting an anomaly when none exists) c
 
 ---
 
-## 🛠️ Integration with Nokia Platform
+## 🛠️ Integration & Human-in-the-Loop
 
-The model is served as a **FastAPI microservice** within a Docker container.
-- **Scalability**: Can be deployed on Kubernetes (K8s) to handle thousands of microwave links simultaneously.
-- **Latency**: Inference time is <10ms, enabling near-real-time monitoring of high-capacity wireless backhauls.
+The model is served as a **FastAPI microservice** within a Docker container, integrated with a **Prometheus** monitoring stack to track inference latency and anomaly rates.
+
+### 4. Human-in-the-Loop (HITL) Workflow
+Nokia's multicultural and distributed engineering teams provide critical "ground truth" labels that improve the model over time.
+- **Feedback Interface**: Operators can flag a prediction as "Correct," "False Positive," or "False Negative" through the network analysis dashboard.
+- **Active Learning**: Discrepancies between model predictions and technician findings (e.g., a "Equipment Failure" alert that was actually "Interference") are prioritized for the next training cycle.
+- **Cultural/Domain Knowledge**: Local field teams can provide context on regional weather patterns or specific hardware quirks that the automated system might miss, ensuring the AI aligns with industrial reality.

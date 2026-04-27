@@ -7,6 +7,7 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, precision_recall_fscore_support
 import matplotlib.pyplot as plt
 import seaborn as sns
+import shap
 
 def train_and_evaluate(input_path='data/processed/features.csv'):
     # Load data
@@ -81,6 +82,11 @@ def train_and_evaluate(input_path='data/processed/features.csv'):
     joblib.dump(rf_final, 'models/random_forest.joblib')
     # Save the feature list for the API to ensure input consistency
     joblib.dump(X.columns.tolist(), 'models/feature_names.joblib')
+    
+    # Explainability: SHAP
+    print("Generating SHAP explainer...")
+    explainer = shap.TreeExplainer(rf_final)
+    joblib.dump(explainer, 'models/shap_explainer.joblib')
     
     # Plot Feature Importance (Final Model)
     plt.figure(figsize=(10, 12))
