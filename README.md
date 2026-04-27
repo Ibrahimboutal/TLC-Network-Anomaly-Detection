@@ -14,12 +14,42 @@ This project implements a robust, automated pipeline for identifying network irr
 - **Model Comparison**: Evaluation of both unsupervised (Isolation Forest) and supervised (Random Forest) approaches.
 - **Production Architecture**: Modular codebase with YAML configuration and professional logging.
 
+## 🏗️ System Design
+
+The system is designed as a modular pipeline following production ML engineering patterns.
+
+```mermaid
+graph TD
+    subgraph "Data Layer"
+        A1[Synthetic Microwave Generator] --> B[Raw Data Lake]
+        A2[Real-World Datasets] --> C[ingest_real_data.py]
+        C --> B
+    end
+
+    subgraph "Processing Layer"
+        B --> D[Exploratory Data Analysis]
+        D --> E[build_features.py]
+        E --> F[Temporal Feature Engineering]
+    end
+
+    subgraph "Model Layer"
+        F --> G[Random Forest / Isolation Forest]
+        G --> H[Model Artifacts / Scalers]
+        G --> I[Benchmarking Suite]
+    end
+
+    subgraph "Deployment Layer"
+        H --> J[FastAPI Microservice]
+        I --> K[Reports & Comparison Matrix]
+    end
+```
+
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.12+
 - pip
 
 ### Installation
@@ -35,23 +65,9 @@ This project implements a robust, automated pipeline for identifying network irr
    ```
 
 ### Running the Pipeline
-You can run the entire end-to-end pipeline (Data Generation -> EDA -> Training -> Evaluation) with a single command:
+You can run the entire end-to-end pipeline (Data Generation -> EDA -> Training -> Real-World Benchmarking) with:
 ```bash
 python main.py
-```
-
-### Serving the API
-To start the real-time anomaly detection microservice:
-```bash
-uvicorn src.api.app:app --reload
-```
-Once running, visit `http://localhost:8000/docs` for the interactive Swagger documentation.
-
-### Containerization (Docker)
-To build and run the system as a container:
-```bash
-docker build -t tlc-anomaly-detector .
-docker run -p 8000:8000 tlc-anomaly-detector
 ```
 
 ---
@@ -59,15 +75,18 @@ docker run -p 8000:8000 tlc-anomaly-detector
 ## 📂 Project Structure
 
 ```text
+├── Anomaly Detection in 4G Cellular Networks/ # Real-world data (Kaggle)
+├── Network Anomaly Dataset/                   # Real-world data (Kaggle)
+├── Synthetic Network Traffic Dataset.../      # Real-world data (Mendeley)
 ├── config/              # YAML configuration files
-├── data/                # Raw and processed datasets (ignored by git)
-├── models/              # Serialized model artifacts (.joblib)
-├── notebooks/           # Experimental notebooks
-├── reports/             # Generated figures and performance metrics
+├── data/                # Raw, processed, and external datasets
+├── models/              # Serialized artifacts (Models, Scalers, Explainers)
+├── notebooks/           # Analysis and benchmarking notebooks
+├── reports/             # Figures and performance metrics
 ├── src/                 # Source code
-│   ├── data/            # Data generation and ingestion
-│   ├── features/        # Feature engineering logic
-│   ├── models/          # Model training and evaluation
+│   ├── data/            # Generation and multi-source ingestion
+│   ├── features/        # Flexible temporal feature engineering
+│   ├── models/          # Training and real-world benchmarking
 │   └── visualization/   # Plotting and EDA scripts
 ├── main.py              # Main execution entry point
 └── requirements.txt     # Python dependencies
@@ -77,26 +96,31 @@ docker run -p 8000:8000 tlc-anomaly-detector
 
 ## 📊 Methodology & Results
 
-The system leverages time-series data to detect shifts in network health. 
+The system evaluates models on both controlled synthetic data and messy real-world datasets.
 
-### Model Performance
-The current pipeline demonstrates near-perfect detection on the synthetic dataset, with the **Random Forest** model providing exceptional precision and recall across all anomaly types.
+### Multi-Source Benchmarking
+We validate our "Microwave-first" model against three external datasets to test generalization:
+1. **4G Cellular Performance**: Base station metrics from a real production network.
+2. **Network Anomaly Dataset**: High-frequency throughput and packet loss data.
+3. **SDN Traffic Dataset**: Synthetic traffic modeling DDoS and port scanning anomalies.
 
-| Model | Precision | Recall | F1-Score |
-|-------|-----------|--------|----------|
-| Isolation Forest | 0.86 | 0.86 | 0.86 |
-| Random Forest | 1.00 | 1.00 | 1.00 |
+### Model Comparison
+| Model | Precision (Syn) | Recall (Syn) | F1-Score (Syn) | Real Data F1 (Avg) |
+|-------|-----------------|--------------|----------------|--------------------|
+| Isolation Forest | 0.86 | 0.86 | 0.86 | 0.00 |
+| Random Forest | 1.00 | 1.00 | 1.00 | 0.12 |
 
-Detailed results and figures can be found in the `reports/` directory after running the pipeline.
+> [!TIP]
+> The performance delta between synthetic and real data highlights the importance of **feature alignment**. The model performs best on real data when `packet_loss` is used as a proxy for the synthetic `BER` (Bit Error Rate).
 
 ---
 
 ## 🛠️ Built With
 - **Pandas/NumPy**: Data manipulation
 - **Scikit-Learn**: Machine learning algorithms
-- **Statsmodels**: Statistical discovery (ADF Test)
-- **Matplotlib/Seaborn**: Data visualization
-- **PyYAML**: Configuration management
+- **SHAP**: Model explainability (XAI)
+- **FastAPI**: Low-latency inference microservice
+- **Mermaid.js**: System architecture documentation
 
 ---
 
